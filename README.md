@@ -3,6 +3,7 @@
 A small, **strictly read-only** web viewer for PostgreSQL. Paste a `SELECT` query, press Run, and see the results in a clean, sortable table — from any machine with a browser. Nothing to install on the machine that views the data.
 
 - SQL editor with PostgreSQL syntax highlighting (Ctrl+Enter to run)
+- DataGrip-style connection dialog: host, port, database, user, password, SSL mode, CA certificate — with a **Test Connection** button
 - Sortable results table, NULL highlighting, row count and query time
 - Schema sidebar: browse tables and columns, click to insert into your query
 - Export results as CSV
@@ -15,11 +16,10 @@ Requirements: [Docker Desktop](https://www.docker.com/products/docker-desktop/) 
 1. **Create the read-only database user** (once, using DataGrip/psql as an admin):
    run [`scripts/create_readonly_user.sql`](scripts/create_readonly_user.sql) after replacing the password and database name.
 
-2. **Configure the connection** (PowerShell, inside the project folder):
+2. **Create the config file** (PowerShell, inside the project folder — defaults are fine, you can set everything in the UI later):
 
    ```powershell
    Copy-Item .env.example .env
-   notepad .env    # set DATABASE_URL to your read-only user
    ```
 
 3. **Start it:**
@@ -28,32 +28,69 @@ Requirements: [Docker Desktop](https://www.docker.com/products/docker-desktop/) 
    docker compose up --build
    ```
 
-4. Open **http://localhost:8000** in your browser. Done.
+4. Open **http://localhost:8000**, click the **⚙ connection** button in the header, and fill in host, port, database, user and password — just like DataGrip. Press **Test Connection**, then **OK**, and run your first `SELECT`.
 
 Colleagues on the same network can use it too at `http://<your-machine>:8000` — their computers need nothing installed at all.
 
-## Quick start (without Docker)
+## Connecting to your database
 
-Requirements: [Python 3.12+](https://www.python.org/downloads/) and [Node.js 20+](https://nodejs.org/).
+Click the **⚙** button in the header to open the data source dialog (DataGrip-style):
+
+| Field | Notes |
+|---|---|
+| Host / Port | Your PostgreSQL server (default port 5432) |
+| Database | Database name |
+| User / Password | Use the **read-only** user from `scripts/create_readonly_user.sql`. The password is kept in memory only — it is never saved to disk or browser storage, so you re-enter it after a page refresh. |
+| SSL mode | `disable`, `allow`, `prefer` (default), `require`, `verify-ca`, `verify-full` |
+| CA certificate | Path to the root/CA certificate file, needed for `verify-ca` / `verify-full` |
+
+**Using an SSL CA certificate with Docker:** the certificate must be readable by the backend, which runs inside the container. Put the file in the project's `certs/` folder (it is mounted into the container automatically) and enter the path as `/certs/your-ca.pem` in the dialog.
+
+**Alternative — server default:** instead of using the dialog, you can set a full connection string in `.env`; the viewer uses it whenever no connection is configured in the UI. SSL options go straight into the string:
+
+```
+DATABASE_URL=postgresql://dbviewer_readonly:pass@host:5432/db?sslmode=verify-full&sslrootcert=/certs/ca.pem
+```
+
+## Quick start (without Docker, with a virtual environment)
+
+Requirements: [Python 3.12+](https://www.python.org/downloads/) (check "Add python.exe to PATH" during install) and [Node.js 20+](https://nodejs.org/).
+
+Open **PowerShell** in the project folder and run:
 
 ```powershell
-# 1. Build the frontend
+# 1. Build the frontend (one time, and after frontend changes)
 cd frontend
 npm install
 npm run build
+cd ..
 
-# 2. Run the backend (serves the frontend too)
-cd ..\backend
+# 2. Create and activate a virtual environment
+cd backend
 python -m venv .venv
-.venv\Scripts\Activate.ps1
+.venv\Scripts\Activate.ps1     # prompt now shows (.venv)
+
+# 3. Install dependencies into the venv
 pip install -r requirements.txt
+
+# 4. Configure and start
 Copy-Item ..\.env.example .env
-notepad .env    # set DATABASE_URL
-Copy-Item -Recurse ..\frontend\dist .\static
+Copy-Item -Recurse -Force ..\frontend\dist .\static
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Then open http://localhost:8000.
+Then open http://localhost:8000. Next time you only need steps 2 (activation) and 4 (start):
+
+```powershell
+cd backend
+.venv\Scripts\Activate.ps1
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+> If PowerShell refuses to run `Activate.ps1` ("running scripts is disabled"), run this once and try again:
+> `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
+Running without Docker, the CA certificate path in the connection dialog is a normal Windows path, e.g. `C:\certs\ca.pem`.
 
 ## Security model
 

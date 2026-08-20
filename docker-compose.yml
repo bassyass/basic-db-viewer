@@ -5,4 +5,8 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    volumes:
+      # SSL CA certificates: put files in ./certs and reference them in the
+      # connection dialog as /certs/<filename>
+      - ./certs:/certs:ro
     restart: unless-stopped

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { fetchSchema } from "../api/client";
-import type { TableInfo } from "../types";
+import type { ConnectionParams, TableInfo } from "../types";
 
 interface Props {
+  connection: ConnectionParams | null;
   onInsert: (text: string) => void;
 }
 
@@ -12,16 +13,20 @@ function qualifiedName(table: TableInfo): string {
     : `${table.schemaName}.${table.name}`;
 }
 
-export function SchemaSidebar({ onInsert }: Props) {
+export function SchemaSidebar({ connection, onInsert }: Props) {
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetchSchema()
+    setError(null);
+    fetchSchema(connection)
       .then((schema) => setTables(schema.tables))
-      .catch((cause: Error) => setError(cause.message));
-  }, []);
+      .catch((cause: Error) => {
+        setTables([]);
+        setError(cause.message);
+      });
+  }, [connection]);
 
   const toggle = (key: string) => {
     setExpanded((current) => {

@@ -3,8 +3,20 @@ import psycopg
 from fastapi import APIRouter, HTTPException
 
 from app.core.sql_guard import SqlValidationError, validate_read_only
-from app.db.executor import execute_read_query, fetch_schema
-from app.models.schemas import QueryRequest, QueryResponse, SchemaResponse
+from app.db.executor import (
+    ConnectionConfigError,
+    execute_read_query,
+    fetch_schema,
+    test_connection,
+)
+from app.models.schemas import (
+    QueryRequest,
+    QueryResponse,
+    SchemaRequest,
+    SchemaResponse,
+    TestConnectionRequest,
+    TestConnectionResponse,
+)
 
 router = APIRouter(prefix="/api")
 
@@ -22,7 +34,9 @@ def run_query(request: QueryRequest) -> QueryResponse:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     try:
-        return execute_read_query(sql)
+        return execute_read_query(sql, request.connection)
+    except ConnectionConfigError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     except psycopg.OperationalError as error:
         raise HTTPException(
             status_code=502, detail=f"Could not reach the database: {error}"
@@ -32,11 +46,24 @@ def run_query(request: QueryRequest) -> QueryResponse:
         raise HTTPException(status_code=400, detail=f"Database error: {message}") from error
 
 
-@router.get("/schema", response_model=SchemaResponse)
-def get_schema() -> SchemaResponse:
+@router.post("/schema", response_model=SchemaResponse)
+def get_schema(request: SchemaRequest) -> SchemaResponse:
     try:
-        return fetch_schema()
+        return fetch_schema(request.connection)
+    except ConnectionConfigError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     except psycopg.OperationalError as error:
         raise HTTPException(
             status_code=502, detail=f"Could not reach the database: {error}"
         ) from error
+
+
+@router.post("/connection/test", response_model=TestConnectionResponse)
+def check_connection(request: TestConnectionRequest) -> TestConnectionResponse:
+    try:
+        version = test_connection(request.connection)
+        return TestConnectionResponse(ok=True, message=version)
+    except ConnectionConfigError as error:
+        return TestConnectionResponse(ok=False, message=str(error))
+    except psycopg.Error as error:
+        return TestConnectionResponse(ok=False, message=str(error))

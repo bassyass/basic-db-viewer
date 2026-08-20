@@ -9,8 +9,32 @@ class CamelModel(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
+class ConnectionParams(CamelModel):
+    host: str
+    port: int = 5432
+    database: str
+    username: str
+    password: str = ""
+    ssl_mode: str = "prefer"
+    ssl_root_cert: str | None = None
+
+
 class QueryRequest(CamelModel):
     sql: str
+    connection: ConnectionParams | None = None
+
+
+class SchemaRequest(CamelModel):
+    connection: ConnectionParams | None = None
+
+
+class TestConnectionRequest(CamelModel):
+    connection: ConnectionParams | None = None
+
+
+class TestConnectionResponse(CamelModel):
+    ok: bool
+    message: str
 
 
 class QueryResponse(CamelModel):

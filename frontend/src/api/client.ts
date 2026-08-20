@@ -1,4 +1,9 @@
-import type { QueryResult, SchemaResult } from "../types";
+import type {
+  ConnectionParams,
+  QueryResult,
+  SchemaResult,
+  TestConnectionResult,
+} from "../types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
@@ -15,14 +20,29 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function runQuery(sql: string): Promise<QueryResult> {
-  return request<QueryResult>("/api/query", {
+function post<T>(url: string, body: unknown): Promise<T> {
+  return request<T>(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sql }),
+    body: JSON.stringify(body),
   });
 }
 
-export function fetchSchema(): Promise<SchemaResult> {
-  return request<SchemaResult>("/api/schema");
+export function runQuery(
+  sql: string,
+  connection: ConnectionParams | null
+): Promise<QueryResult> {
+  return post<QueryResult>("/api/query", { sql, connection });
+}
+
+export function fetchSchema(
+  connection: ConnectionParams | null
+): Promise<SchemaResult> {
+  return post<SchemaResult>("/api/schema", { connection });
+}
+
+export function testConnection(
+  connection: ConnectionParams | null
+): Promise<TestConnectionResult> {
+  return post<TestConnectionResult>("/api/connection/test", { connection });
 }
