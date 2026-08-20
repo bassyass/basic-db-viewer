@@ -4,7 +4,7 @@ A small, **strictly read-only** web viewer for PostgreSQL. Paste a `SELECT` quer
 
 - SQL editor with PostgreSQL syntax highlighting (Ctrl+Enter to run)
 - DataGrip-style connection dialog: host, port, database, user, password, SSL mode, CA certificate — with a **Test Connection** button
-- Sortable results table, NULL highlighting, row count and query time
+- Two result views: sortable **Table** (NULL highlighting, row count, query time) and **Raw** JSON with one-click copy
 - Schema sidebar: browse tables and columns, click to insert into your query
 - Export results as CSV
 - **Writes are impossible by design** — see [Security model](#security-model)

@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { runQuery } from "./api/client";
 import { ConnectionDialog } from "./components/ConnectionDialog";
 import { QueryEditor } from "./components/QueryEditor";
+import { RawView } from "./components/RawView";
 import { ResultsTable } from "./components/ResultsTable";
 import { SchemaSidebar } from "./components/SchemaSidebar";
 import { StatusBar } from "./components/StatusBar";
@@ -21,6 +22,7 @@ export default function App() {
   const [result, setResult] = useState<QueryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "raw">("table");
 
   const handleRun = useCallback(() => {
     if (isRunning || !sql.trim()) return;
@@ -81,8 +83,32 @@ export default function App() {
           {error && <div className="error-banner">{error}</div>}
           {result && (
             <>
-              <StatusBar result={result} />
-              <ResultsTable result={result} />
+              <div className="results-header">
+                <div className="view-toggle" role="tablist" aria-label="Result view">
+                  <button
+                    role="tab"
+                    aria-selected={viewMode === "table"}
+                    className={viewMode === "table" ? "active" : ""}
+                    onClick={() => setViewMode("table")}
+                  >
+                    Table
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={viewMode === "raw"}
+                    className={viewMode === "raw" ? "active" : ""}
+                    onClick={() => setViewMode("raw")}
+                  >
+                    Raw
+                  </button>
+                </div>
+                <StatusBar result={result} />
+              </div>
+              {viewMode === "table" ? (
+                <ResultsTable result={result} />
+              ) : (
+                <RawView result={result} />
+              )}
             </>
           )}
           {!result && !error && (
